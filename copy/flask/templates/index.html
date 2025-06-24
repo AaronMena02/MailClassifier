@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>Clasificación de Emails</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 20px auto; }
+        .email { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 6px; }
+        .header { font-weight: bold; }
+        .text { margin-top: 10px; white-space: pre-wrap; }
+        .classification { margin-top: 10px; background: #f9f9f9; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Correos Recibidos y Clasificación</h1>
+    {% for email in emails %}
+    <div class="email">
+        <div class="header">De: {{ email.from }}</div>
+        <div class="header">Asunto: {{ email.subject }}</div>
+        <div class="text">{{ email.text[:300] }}{% if email.text|length > 300 %}...{% endif %}</div>
+        <div class="classification">
+            <div>Sentimiento: {{ email.classification.sentiment }} ({{ '%.2f'|format(email.classification.sentiment_prob * 100) }}%)</div>
+            <div>Prioridad: {{ email.classification.priority }} ({{ '%.2f'|format(email.classification.priority_prob * 100) }}%)</div>
+            <div>Categoría: {{ email.classification.category }} ({{ '%.2f'|format(email.classification.category_prob * 100) }}%)</div>
+        </div>
+    </div>
+    {% endfor %}
+</body>
+</html>
