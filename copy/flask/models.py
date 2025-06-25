@@ -2,6 +2,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 import os
 import json
+import re
 
 # Rutas a los modelos guardados
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -30,6 +31,16 @@ tokenizer_priority, model_priority, priority_map = load_model_components(MODELS_
 tokenizer_category, model_category, category_map = load_model_components(MODELS_PATHS["category"])
 
 
+def preprocesar_texto(asunto, cuerpo):
+    """
+    Une asunto y cuerpo. Limpia caracteres raros, múltiples espacios y asegura entrada coherente.
+    """
+    texto = f"{asunto.strip()}. {cuerpo.strip()}"
+    texto = re.sub(r"\s+", " ", texto)  # elimina saltos de línea múltiples, tabs, etc.
+    texto = texto.encode("utf-8", "ignore").decode("utf-8", "ignore")  # remueve caracteres no válidos
+    return texto.strip()
+
+
 # Función de predicción
 def predict(text, tokenizer, model):
     inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
@@ -39,21 +50,6 @@ def predict(text, tokenizer, model):
     pred_idx = torch.argmax(probs, dim=1).item()
     confidence = probs[0][pred_idx].item()
     return pred_idx, confidence
-
-"""def predict(text, tokenizer, model):
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True, max_length=512)
-    with torch.no_grad():
-        outputs = model(**inputs)
-    
-    print("Input text:", text)
-    print("Logits:", outputs.logits)
-    print("Logits shape:", outputs.logits.shape)
-
-    probs = torch.nn.functional.softmax(outputs.logits, dim=-1)
-    pred_idx = torch.argmax(probs, dim=1).item()
-    confidence = probs[0][pred_idx].item()
-    return pred_idx, confidence"""
-
 
 # Clasificación completa del correo
 def classify_email(text):

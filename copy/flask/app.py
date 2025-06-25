@@ -1,9 +1,7 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from gmail_api import get_gmail_service, list_messages, get_message, get_plain_text
-from models import classify_email
+from models import classify_email, preprocesar_texto
 from email.header import decode_header
-from flask import jsonify
-
 
 app = Flask(__name__)
 
@@ -21,14 +19,19 @@ def obtener_emails_clasificados(max_results=20):
     for m in messages:
         email_msg = get_message(service, m['id'])
         if email_msg:
-            text = get_plain_text(email_msg)
-            if not text.strip():
+            subject = decodificar_header(email_msg.get("Subject", "(sin asunto)"))
+            body = get_plain_text(email_msg)
+            
+            if not body.strip():
                 continue  # Evita clasificar correos vacíos
-            classification = classify_email(text)
+
+            entrada_modelo = preprocesar_texto(subject, body)
+            classification = classify_email(entrada_modelo)
+
             emails.append({
                 "from": decodificar_header(email_msg.get("From", "(sin remitente)")),
-                "subject": decodificar_header(email_msg.get("Subject", "(sin asunto)")),
-                "text": text,
+                "subject": subject,
+                "text": body,
                 "classification": classification
             })
     return emails
@@ -60,14 +63,12 @@ def filtrar(tipo, valor):
     if tipo not in ["sentimiento", "prioridad", "categoria"]:
         return "Filtro no válido", 400
 
-    # Mapear a claves del diccionario interno
     clave = {
         "sentimiento": "sentiment",
         "prioridad": "priority",
         "categoria": "category"
     }[tipo]
 
-    # Obtener todos los correos y filtrar por etiqueta
     emails = obtener_emails_clasificados(max_results=30)
     emails_filtrados = [e for e in emails if e["classification"].get(clave, "").lower() == valor.lower()]
 
