@@ -1,8 +1,8 @@
 .venv
 .ipynb_checkpoints/
 project/
-modelo_sentiment/
-modelo_categoria/
-modelo_priority/
+sentiment_model/
+category_model/
+priority_model/
 copy/flask/token.json
 copy/flask/credentials.json
