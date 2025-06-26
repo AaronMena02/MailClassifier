@@ -5,7 +5,17 @@
   <title>Panel de Correos</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    // Menús desplegables simples sin JS externo
+    function formatearRemitente(raw) {
+  const match = raw.match(/(.*)<(.*)>/);
+  if (match) {
+    const nombre = match[1].trim();
+    const correo = match[2].trim();
+    return `<div class="font-bold text-green-700">${nombre}</div><div class="text-sm text-gray-500">${correo}</div>`;
+  } else {
+    return `<div class="font-bold text-green-700">${raw}</div>`;
+  }
+}
+
     function toggleMenu(id) {
       const menu = document.getElementById(id);
       menu.classList.toggle('hidden');
@@ -24,99 +34,108 @@
       <div class="text-2xl font-bold mb-8">📧 Clasificador</div>
       <nav class="space-y-4">
 
-        <a href="#" class="block text-green-600 font-semibold hover:underline">📥 Bandeja de entrada</a>
-        <a href="#" class="block hover:text-green-600">📤 Enviados</a>
-        <a href="#" class="block hover:text-green-600">📝 Borradores</a>
-        <a href="#" class="block hover:text-green-600">⭐ Destacados</a>
-        <a href="#" class="block hover:text-green-600">🗑 Eliminados</a>
+        <button onclick="aplicarFiltro(null, null)" class="block text-green-600 font-semibold hover:underline">📥 Bandeja de entrada</button>
+        <button onclick="aplicarFiltro('prioridad', 'alta')" class="block hover:text-green-600">🔥 Alta prioridad</button>
 
-        <!-- Filtro: Sentimiento -->
+        <!-- Sentimiento -->
         <div>
           <button onclick="toggleMenu('menu-sentimiento')" class="w-full text-left font-semibold text-gray-700 hover:text-green-600">💬 Sentimiento</button>
           <div id="menu-sentimiento" class="ml-4 mt-2 space-y-1 hidden">
-            <a href="/filtro/sentimiento/positivo" class="block text-sm hover:text-green-600">🙂 Positivo</a>
-            <a href="/filtro/sentimiento/neutro" class="block text-sm hover:text-green-600">😐 Neutro</a>
-            <a href="/filtro/sentimiento/negativo" class="block text-sm hover:text-green-600">🙁 Negativo</a>
+            <button onclick="aplicarFiltro('sentimiento', 'positivo')" class="block text-sm hover:text-green-600">🙂 Positivo</button>
+            <button onclick="aplicarFiltro('sentimiento', 'neutro')" class="block text-sm hover:text-green-600">😐 Neutro</button>
+            <button onclick="aplicarFiltro('sentimiento', 'negativo')" class="block text-sm hover:text-green-600">🙁 Negativo</button>
           </div>
         </div>
 
-        <!-- Filtro: Prioridad -->
+        <!-- Prioridad -->
         <div>
           <button onclick="toggleMenu('menu-prioridad')" class="w-full text-left font-semibold text-gray-700 hover:text-green-600">⚠️ Prioridad</button>
           <div id="menu-prioridad" class="ml-4 mt-2 space-y-1 hidden">
-            <a href="/filtro/prioridad/alta" class="block text-sm hover:text-green-600">🔴 Alta</a>
-            <a href="/filtro/prioridad/media" class="block text-sm hover:text-green-600">🟠 Media</a>
-            <a href="/filtro/prioridad/baja" class="block text-sm hover:text-green-600">🟢 Baja</a>
+            <button onclick="aplicarFiltro('prioridad', 'alta')" class="block text-sm hover:text-green-600">🔴 Alta</button>
+            <button onclick="aplicarFiltro('prioridad', 'media')" class="block text-sm hover:text-green-600">🟠 Media</button>
+            <button onclick="aplicarFiltro('prioridad', 'baja')" class="block text-sm hover:text-green-600">🟢 Baja</button>
           </div>
         </div>
 
-        <!-- Filtro: Categoría -->
+        <!-- Categoría -->
         <div>
           <button onclick="toggleMenu('menu-categoria')" class="w-full text-left font-semibold text-gray-700 hover:text-green-600">📂 Categoría</button>
           <div id="menu-categoria" class="ml-4 mt-2 space-y-1 hidden">
-            <a href="/filtro/categoria/solicitud" class="block text-sm hover:text-green-600">📨 Solicitud</a>
-            <a href="/filtro/categoria/comercial" class="block text-sm hover:text-green-600">💼 Comercial</a>
-            <a href="/filtro/categoria/queja" class="block text-sm hover:text-green-600">❗ Queja</a>
-            <a href="/filtro/categoria/otro" class="block text-sm hover:text-green-600">📌 Otro</a>
+            <button onclick="aplicarFiltro('categoria', 'solicitud')" class="block text-sm hover:text-green-600">📨 Solicitud</button>
+            <button onclick="aplicarFiltro('categoria', 'comercial')" class="block text-sm hover:text-green-600">💼 Comercial</button>
+            <button onclick="aplicarFiltro('categoria', 'queja')" class="block text-sm hover:text-green-600">❗ Queja</button>
+            <button onclick="aplicarFiltro('categoria', 'otro')" class="block text-sm hover:text-green-600">📌 Otro</button>
           </div>
         </div>
-
       </nav>
     </aside>
 
     <!-- Contenido principal -->
     <main class="ml-64 flex-1 overflow-y-auto p-6">
-      <!-- Cabecera -->
       <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-semibold text-gray-800">Bandeja de entrada</h1>
+        <h1 class="text-2xl font-semibold text-gray-800">Correos recibidos</h1>
       </div>
 
-      <!-- Lista de correos -->
-      <div class="space-y-4">
-       <div id="correo-container" class="space-y-4"></div>
-      </div>
+      <!-- Contenedor donde se cargan los correos -->
+      <div id="correo-container" class="space-y-4"></div>
     </main>
   </div>
 
+  <!-- Script JS para cargar y filtrar correos dinámicamente -->
+  <script>
+    let filtroTipo = null;
+    let filtroValor = null;
+
+    async function cargarCorreos() {
+      try {
+        let url = "/api/correos";
+        if (filtroTipo && filtroValor) {
+          url += `?tipo=${encodeURIComponent(filtroTipo)}&valor=${encodeURIComponent(filtroValor)}`;
+        }
+
+        const response = await fetch(url);
+        const emails = await response.json();
+        const container = document.getElementById("correo-container");
+        container.innerHTML = "";
+
+        emails.forEach(email => {
+          const card = document.createElement("div");
+          card.className = "bg-white rounded-lg shadow p-5 hover:bg-green-50 transition duration-200";
+          card.innerHTML = `
+            <div class="flex justify-between items-start">
+              <div>
+${formatearRemitente(email.from)}
+                <div class="text-base font-semibold text-gray-800">${email.subject}</div>
+              </div>
+              <div class="text-sm text-gray-400">Ahora</div>
+            </div>
+            <div class="mt-3 text-sm text-gray-700">
+              ${email.text.slice(0, 300)}${email.text.length > 300 ? "..." : ""}
+            </div>
+            <div class="mt-4 text-sm bg-gray-50 p-3 rounded-lg space-y-1">
+              <div>🧠 Sentimiento: <strong>${email.classification.sentiment}</strong> </div>
+              <div>⚠️ Prioridad: <strong>${email.classification.priority}</strong></div>
+              <div>📂 Categoría: <strong>${email.classification.category}</strong></div>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+
+      } catch (error) {
+        console.error("Error al cargar correos:", error);
+      }
+    }
+
+    function aplicarFiltro(tipo, valor) {
+      filtroTipo = tipo;
+      filtroValor = valor;
+      cargarCorreos();
+    }
+
+    // Cargar correos automáticamente
+    cargarCorreos();
+    setInterval(cargarCorreos, 10000); // actualiza cada 20 segundos
+  </script>
+
 </body>
 </html>
-<script>
-async function cargarCorreos() {
-  try {
-    const response = await fetch("/api/correos");
-    const emails = await response.json();
-    const container = document.getElementById("correo-container");
-    container.innerHTML = ""; // limpia la vista
-
-    emails.forEach(email => {
-      const card = document.createElement("div");
-      card.className = "bg-white rounded-lg shadow p-5 hover:bg-green-50 transition duration-200";
-      card.innerHTML = `
-        <div class="flex justify-between items-start">
-          <div>
-            <div class="font-bold text-green-700">${email.from}</div>
-            <div class="text-base font-semibold text-gray-800">${email.subject}</div>
-          </div>
-          <div class="text-sm text-gray-400">Ahora</div>
-        </div>
-        <div class="mt-3 text-sm text-gray-700">
-          ${email.text.slice(0, 300)}${email.text.length > 300 ? "..." : ""}
-        </div>
-        <div class="mt-4 text-sm bg-gray-50 p-3 rounded-lg space-y-1">
-          <div>🧠 Sentimiento: <strong>${email.classification.sentiment}</strong> (${(email.classification.sentiment_prob * 100).toFixed(2)}%)</div>
-          <div>⚠️ Prioridad: <strong>${email.classification.priority}</strong> (${(email.classification.priority_prob * 100).toFixed(2)}%)</div>
-          <div>📂 Categoría: <strong>${email.classification.category}</strong> (${(email.classification.category_prob * 100).toFixed(2)}%)</div>
-        </div>
-      `;
-      container.appendChild(card);
-    });
-
-  } catch (error) {
-    console.error("Error al cargar correos:", error);
-  }
-}
-
-// Carga al inicio y luego cada 20 segundos
-cargarCorreos();
-setInterval(cargarCorreos, 20000); // cada 20 segundos
-</script>

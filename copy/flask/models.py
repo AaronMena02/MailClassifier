@@ -4,7 +4,6 @@ import os
 import json
 import re
 
-# Rutas a los modelos guardados
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_PATHS = {
     "sentiment": os.path.join(BASE_DIR, "../sentiment_model"),
@@ -32,12 +31,9 @@ tokenizer_category, model_category, category_map = load_model_components(MODELS_
 
 
 def preprocesar_texto(asunto, cuerpo):
-    """
-    Une asunto y cuerpo. Limpia caracteres raros, múltiples espacios y asegura entrada coherente.
-    """
     texto = f"{asunto.strip()}. {cuerpo.strip()}"
-    texto = re.sub(r"\s+", " ", texto)  # elimina saltos de línea múltiples, tabs, etc.
-    texto = texto.encode("utf-8", "ignore").decode("utf-8", "ignore")  # remueve caracteres no válidos
+    texto = re.sub(r"\s+", " ", texto) 
+    texto = texto.encode("utf-8", "ignore").decode("utf-8", "ignore")  
     return texto.strip()
 
 

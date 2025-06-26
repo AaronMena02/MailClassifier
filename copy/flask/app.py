@@ -5,12 +5,7 @@ from email.header import decode_header
 
 app = Flask(__name__)
 
-@app.route("/api/correos")
-def api_correos():
-    emails = obtener_emails_clasificados(max_results=10)
-    return jsonify(emails)
-
-# Función auxiliar para cargar y clasificar correos
+#  cargar y clasificar correos
 def obtener_emails_clasificados(max_results=20):
     service = get_gmail_service()
     messages = list_messages(service, max_results=max_results)
@@ -23,7 +18,7 @@ def obtener_emails_clasificados(max_results=20):
             body = get_plain_text(email_msg)
             
             if not body.strip():
-                continue  # Evita clasificar correos vacíos
+                continue  
 
             entrada_modelo = preprocesar_texto(subject, body)
             classification = classify_email(entrada_modelo)
@@ -51,13 +46,34 @@ def decodificar_header(header_value):
             decoded_string += fragment
     return decoded_string
 
-# Ruta principal
 @app.route('/')
 def home():
     emails = obtener_emails_clasificados()
     return render_template('index.html', emails=emails)
 
-# Ruta para filtros dinámicos
+
+@app.route('/api/correos')
+def api_correos():
+    tipo = request.args.get("tipo")
+    valor = request.args.get("valor")
+
+    emails = obtener_emails_clasificados(max_results=20)
+
+    if tipo and valor:
+        claves = {
+            "sentimiento": "sentiment",
+            "prioridad": "priority",
+            "categoria": "category"
+        }
+        clave = claves.get(tipo.lower())
+        if clave:
+            emails = [e for e in emails if e["classification"].get(clave, "").lower() == valor.lower()]
+
+    return jsonify(emails)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
 @app.route('/filtro/<tipo>/<valor>')
 def filtrar(tipo, valor):
     if tipo not in ["sentimiento", "prioridad", "categoria"]:
